@@ -1,23 +1,34 @@
 import { useState } from 'react'
 import { styled } from 'styled-components'
 import { Container } from '@/theme'
-import Dropdown from '@/components/DropDown.tsx'
+import Dropdown from '@/components/DropDown'
 
 type FilterProps = {
   apps: string[]
-  onFilter: (filters: { message: string; app: string; date: string }) => void
+  onFilter: (filters: { message: string; app: string; dateFrom: string; dateTo: string }) => void
 }
 
 export default function Filter({ apps, onFilter }: FilterProps) {
   const [message, setMessage] = useState('')
   const [app, setApp] = useState('')
-  const [date, setDate] = useState('')
+  const [dateFrom, setDateFrom] = useState('')
+  const [dateTo, setDateTo] = useState('')
 
-  const handleChange = (field: 'message' | 'app' | 'date', value: string) => {
-    if (field === 'message') setMessage(value)
-    if (field === 'app') setApp(value)
-    if (field === 'date') setDate(value)
-    onFilter({ message, app, date, [field]: value })
+  const emit = (
+    next?: Partial<{
+      message: string
+      app: string
+      dateFrom: string
+      dateTo: string
+    }>
+  ) => {
+    onFilter({
+      message,
+      app,
+      dateFrom,
+      dateTo,
+      ...next,
+    })
   }
 
   return (
@@ -26,11 +37,43 @@ export default function Filter({ apps, onFilter }: FilterProps) {
         <Row>
           <Input
             value={message}
-            onChange={(e) => handleChange('message', e.target.value)}
             placeholder="Фильтр сообщений"
+            onChange={(e) => {
+              setMessage(e.target.value)
+              emit({ message: e.target.value })
+            }}
           />
-          <Dropdown options={apps} value={app} onChange={(val) => handleChange('app', val)} />
-          <DateInput type={'date'} value={date} onChange={(e) => handleChange('date', e.target.value)} />
+
+          <Dropdown
+            options={apps}
+            value={app}
+            onChange={(val) => {
+              setApp(val)
+              emit({ app: val })
+            }}
+          />
+
+          <DateInput
+            type="date"
+            value={dateFrom}
+            max={dateTo || undefined}
+            onChange={(e) => {
+              const val = e.target.value
+              setDateFrom(val)
+              emit({ dateFrom: val })
+            }}
+          />
+
+          <DateInput
+            type="date"
+            value={dateTo}
+            min={dateFrom || undefined}
+            onChange={(e) => {
+              const val = e.target.value
+              setDateTo(val)
+              emit({ dateTo: val })
+            }}
+          />
         </Row>
       </Container>
     </Root>

@@ -7,9 +7,10 @@ import { APPS, generateSysLogs } from '@/components/data.ts'
 import { loadLogs } from '@/utils'
 import Loader from '@/components/Loader.tsx'
 import Filter from '@/components/Filter.tsx'
+import { useDebounce } from '@uidotdev/usehooks'
 
 const EXTRA_HEIGHT = 3
-const LOGS_COUNT = 100
+const LOGS_COUNT = 10000
 const ITEM_HEIGHT = 62 + 15
 
 const data = generateSysLogs(LOGS_COUNT)
@@ -17,40 +18,38 @@ const data = generateSysLogs(LOGS_COUNT)
 export default function Main() {
   const rootRef = useRef<HTMLDivElement>(null)
   const [visibleCount, setVisibleCount] = useState(0)
-  const [offset, setOffset] = useState(0)
   const [list, setList] = useState<SysLogEvent[]>([])
   const [isLoading, setIsLoading] = useState(false)
   const [resizeTimeout, setResizeTimeout] = useState<NodeJS.Timeout>()
-  const [filter, setFilter] = useState<LogsFilter>({})
-  const [end, setEnd] = useState<boolean>(false)
+  const [filter, setFilter] = useState<LogsFilter>({ app: '', dateFrom: '', dateTo: '', message: '' })
+  const end = useRef<boolean>(false)
+  const offset = useRef<number>(0)
+  const debouncedFilter = useDebounce(filter, 300)
 
-  const handleLoadMore = async (data: SysLogEvent[], offset: number, limit: number, loadFilter: LogsFilter) => {
-    if (end) return
+  const handleLoadMore = async (data: SysLogEvent[], limit: number, loadFilter: LogsFilter) => {
+    if (end.current) return
     setIsLoading(true)
-    const { logs: newLogs, nextOffset } = await loadLogs(data, offset, limit, loadFilter)
+    const { logs: newLogs, nextOffset } = await loadLogs(data, offset.current, limit, loadFilter)
     if (newLogs.length === 0) {
-      setEnd(true)
+      end.current = true
     }
     setList((prev) => [...prev, ...newLogs])
-    setOffset(nextOffset)
+    offset.current = nextOffset
     setIsLoading(false)
   }
 
   const handleFilterChange = (newFilter: LogsFilter) => {
-    setEnd(false)
-    const filtered = list.filter((log) => {
-      return (
-        (!newFilter.message || log.message.includes(newFilter.message)) &&
-        (!newFilter.app || log.app === newFilter.app) &&
-        (!newFilter.date || log.date.toISOString().slice(0, 10) === newFilter.date)
-      )
-    })
-    setList(filtered)
+    end.current = false
     setFilter(newFilter)
-    if (filtered.length < visibleCount) {
-      handleLoadMore(data, offset, visibleCount - filtered.length, newFilter)
-    }
   }
+
+  useEffect(() => {
+    if (!visibleCount) return
+    offset.current = 0
+    setList([])
+
+    handleLoadMore(data, visibleCount, debouncedFilter)
+  }, [debouncedFilter])
 
   const containerHeightHandler = () => {
     if (!rootRef.current) return
@@ -77,7 +76,7 @@ export default function Main() {
   }, [])
 
   useEffect(() => {
-    if (visibleCount > 0 && !list.length && !isLoading) handleLoadMore(data, 0, visibleCount, filter)
+    if (visibleCount > 0 && !list.length && !isLoading) handleLoadMore(data, visibleCount, filter)
   }, [visibleCount])
 
   const handleScroll = () => {
@@ -86,7 +85,7 @@ export default function Main() {
     const { scrollTop, scrollHeight, clientHeight } = rootRef.current
 
     if (!isLoading && scrollTop + clientHeight >= scrollHeight - 5 && list.length < data.length) {
-      handleLoadMore(data, offset, visibleCount, filter)
+      handleLoadMore(data, visibleCount, filter)
     }
   }
 

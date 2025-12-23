@@ -27,9 +27,13 @@ export const loadLogs = (
 
         const matchMessage = filter?.message ? log.message.toLowerCase().includes(filter.message.toLowerCase()) : true
         const matchApp = filter?.app ? log.app === filter.app : true
-        const matchDate = filter?.date ? log.date.toISOString().slice(0, 10) === filter.date : true
 
-        if (matchMessage && matchApp && matchDate) {
+        const logDate = log.date.toISOString().slice(0, 10)
+
+        const matchDateFrom = filter?.dateFrom ? logDate >= filter.dateFrom : true
+        const matchDateTo = filter?.dateTo ? logDate <= filter.dateTo : true
+
+        if (matchMessage && matchApp && matchDateFrom && matchDateTo) {
           result.push(log)
           count++
         }

@@ -7,7 +7,8 @@ export type SysLogEvent = {
 }
 
 export type LogsFilter = {
-  message?: string
-  app?: string
-  date?: string
+  message: string
+  app: string
+  dateFrom: string
+  dateTo: string
 }
