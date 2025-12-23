@@ -29,13 +29,18 @@ export default function Main() {
   const handleLoadMore = async (data: SysLogEvent[], limit: number, loadFilter: LogsFilter) => {
     if (end.current) return
     setIsLoading(true)
-    const { logs: newLogs, nextOffset } = await loadLogs(data, offset.current, limit, loadFilter)
-    if (newLogs.length === 0) {
-      end.current = true
+    try {
+      const { logs: newLogs, nextOffset } = await loadLogs(data, offset.current, limit, loadFilter)
+      if (newLogs.length === 0) {
+        end.current = true
+      }
+      setList((prev) => [...prev, ...newLogs])
+      offset.current = nextOffset
+    } catch (error) {
+      console.error('Ошибка загрузки логов', error)
+    } finally {
+      setIsLoading(false)
     }
-    setList((prev) => [...prev, ...newLogs])
-    offset.current = nextOffset
-    setIsLoading(false)
   }
 
   const handleFilterChange = (newFilter: LogsFilter) => {
